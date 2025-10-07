@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "1MhfWYkL3Pw=",
+  "success": true,
+  "projectFilePath": "/Users/y.godaiin/ReadingBook/4/4.fsproj",
+  "expectedPackageFiles": [
+    "/Users/y.godaiin/.nuget/packages/fsharp.core/9.0.303/fsharp.core.9.0.303.nupkg.sha512"
+  ],
+  "logs": []
+}
