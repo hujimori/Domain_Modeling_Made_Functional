@@ -177,14 +177,31 @@ type PaidInvoice =
 // 実行可能なアクションを文章化するために、代わりに関数を表す型を定義する
 type PayInvoice = UnpaidInvoice -> Payment -> PaidInvoice
 
-// アクションの具体的な実装例
+// A.通常の支払い処理
 let payInvoice (unpaid: UnpaidInvoice) (payment: Payment) : PaidInvoice =
     { OriginalInvoice = unpaid
       Payment = payment
       PaidOnDate = System.DateTime.UtcNow
       ConfirmationCode = "CONF-XYZ-123" }
 
-// 1. サンプルの「未払いの請求書」データを作成する
+// B.ポイントを使って支払う、別の実装
+let payInvoiceWithPoints (unpaid: UnpaidInvoice) (payment: Payment) : PaidInvoice =
+    // ポイント利用のロジック
+    printfn " （ポイント利用のロジックが実行されました）"
+
+    { OriginalInvoice = unpaid
+      Payment = payment
+      PaidOnDate = System.DateTime.UtcNow
+      ConfirmationCode = "CONF-XYZ-456" }
+
+// 「請求書を支払う能力」を受け取って、ログ出力などの共通処理を追加する関数
+let executePaymentProcess (paymentProcessor: PayInvoice) (invoice: UnpaidInvoice) (payment: Payment) =
+    printfn "--- 支払いプロセスを開始します ---"
+    let paidInvoice = paymentProcessor invoice payment
+    printfn "--- 支払いプロセスが完了しました ---"
+    paidInvoice
+
+
 let sampleUnpaidInvoice =
     { Id = InvoiceId 101
       CustomerInfo =
@@ -208,11 +225,39 @@ let samplePayment =
             { CardType = Visa
               CardNumber = CardNumber "1234-5678-9012-3456" } }
 
-// 3. payInvoice関数を呼び出して、未払いの請求書を支払う
-let resultingPaidInvoice = payInvoice sampleUnpaidInvoice samplePayment
 
-// 4. 結果として得られた「支払い済みの請求書」をコンソールに表示する
-printfn "--- 支払い処理が完了しました ---"
-printfn "作成された「支払い済み請求書」:"
-// `%A` はデータ構造を人間が読みやすい形できれいに表示してくれる
-printfn "%A" resultingPaidInvoice
+// 1. 「通常の支払い能力」を渡してプロセスを実行
+printfn "¥n[実行例1: 通常の支払い]"
+let result1 = executePaymentProcess payInvoice sampleUnpaidInvoice samplePayment
+printfn "結果：%A" result1
+
+// 2. 「ポイント利用の支払い能力」を渡してプロセスを実行
+printfn "¥n[実行例2: ポイントを使った支払い]"
+
+let result2 =
+    executePaymentProcess payInvoiceWithPoints sampleUnpaidInvoice samplePayment
+
+printfn "結果：%A" result2
+
+// 省略可能な値のモデリング
+type Option<'a> =
+    | Some of 'a
+    | None
+
+type PersonalName =
+    { FirstName: string
+      MiddleInitial: string option
+      LastName: string }
+
+// エラーのモデリング
+type Result<'Success, 'Failure> =
+    | Ok of 'Success
+    | Error of 'Failure
+
+// 請求書の支払いが失敗した時のエラー
+type PaymentError =
+    | CardTypeNotRecognized
+    | PaymentRejected
+    | PaymentProviderOffline
+
+type payInvoiceWithError = UnpaidInvoice -> Payment -> Result<PaidInvoice, PaymentError>
