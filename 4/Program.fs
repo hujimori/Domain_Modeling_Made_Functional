@@ -239,6 +239,79 @@ let result2 =
 
 printfn "結果：%A" result2
 
+// ではポイントの前にクーポンを適用するかどうか？をどうやって定義するか
+// 支払い前に適用できるものが増えると、 その組み合わせのカ数だけアクションの定義が増えてしまう
+// 例えば以下のようなアクションは自由度が低い
+// type  PayInvoice = UnpaidInvoice -> Point -> Payment -> PaidInvoice
+// それに対するアンサーとして以下のような定義が考えられる
+// ポイントの型
+// type Points = Points of int
+
+// ポイント適用後の請求書、という新しい「状態」を表す型
+// 元の請求書、使ったポイント、そして新しい請求額を持つ
+// type InvoiceWithPointsApplied =
+//     { OriginalInvoice: UnpaidInvoice
+//       PointsUsed: Points
+//       NewAmountDue: BilledAmount }
+
+// 「支払い要求」は、「通常の請求」か「ポイント適用後の請求」のどちらかである
+// type PaymentRequest =
+//     | Regular of UnpaidInvoice
+//     | WithPoints of InvoiceWithPointsApplied
+
+// これは支払いにポイントが必ず使われる想定の定義となる
+// ポイントを使うかどうか任意としたいというの常である
+// この定義はポイント以外の適用できるものが増えると
+// With〇〇AndXXみたいな定義どんどん増える
+
+// できれば型を合成するような形で自由に定義をしたい
+// それに対するアンサーとして「状態を変化させる（イベント）のリストを定義する
+// 割引のモデルを定義
+type Coupon = { Code: string; Amount: decimal }
+type Points = Points of int
+
+// 「割引」とは「クーポン利用」または「ポイント利用」である
+// 「割引」を定義すると以下のようになる
+type Discount =
+    | CouponApplied of Coupon // 「クーポンの利用」を定義
+    | PointsUesd of Points // 「ポイント利用」を定義
+// GifCartApplied of GitCard // 新しい割引方法もこのように追加できる
+
+// 「支払い前の請求書」という、進行中の状態を表す型を定義する
+// 割引の「原因と過程」を残すと何が嬉しいの？
+// ⇨その請求書がどういう過程でその金額になったかを記録するため
+// 実際のお店のレシートのと同じ
+// CurrentAmountDue (支払総額): レシートの一番下に書かれている、あなたが最終的に支払う金額。これさえあれば支払いはできる。
+// AppliedDiscounts (割引リスト): 「会員割引: -100円」「クーポン利用: -200円」といった、支払総額に至るまでの内訳になる。
+type PrePaymentInvoice =
+    { OriginalInvoice: UnpaidInvoice
+      AppliedDiscounts: Discount list // 割引の「原因と過程」を表す
+      CurrentAmountDue: decimal } // 割引後の「結果」を表す
+
+// 「状態を変化させる関数」を定義する
+let applyCoupon (coupon: Coupon) (invoice: PrePaymentInvoice) : PrePaymentInvoice =
+    {
+      // これどういう意味
+      // 「with」を使うと更新が必要な値だけコピーして新しいレコードが疲れる
+      // この場合、OriginalInvoiceはそのままの値になる
+      // invoiceの新しいコピーを作成する
+      // コピーのAppliedDiscountsフィールドを更新する（元のリストの先頭に、新しい割引を1つ追加）
+      // コピーのCurrentAountDueフィールドを更新する
+      invoice with
+        AppliedDiscounts = (CouponApplied coupon) :: invoice.AppliedDiscounts
+        CurrentAmountDue = invoice.CurrentAmountDue - coupon.Amount }
+
+let applyPoints points (invoice: PrePaymentInvoice) =
+    let (Points p) = points
+    let discountAmount = decimal p
+
+    { invoice with
+        AppliedDiscounts = (PointsUesd points) :: invoice.AppliedDiscounts
+        CurrentAmountDue = invoice.CurrentAmountDue - discountAmount }
+
+// TODO ステップ4：PayInvoiceの定義を更新するを書く
+
+
 // 省略可能な値のモデリング
 type Option<'a> =
     | Some of 'a
