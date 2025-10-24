@@ -125,7 +125,7 @@ type PaymentMethod =
     | Card of CreditCardInfo
 
 // 支払い総額
-type PaymentAmount = PaymentAmount of decimal
+// type PaymentAmount = PaymentAmount of decimal
 
 // 通過
 type Currency =
@@ -134,11 +134,11 @@ type Currency =
 
 // 支払い型
 // 支払い総額と通貨の直積型で表す
-type Payment =
-    { Amount: PaymentAmount
-      Currency: Currency
-      Method: PaymentMethod }
-
+// type Payment =
+//     { Amount: PaymentAmount
+//       Currency: Currency
+//       Method: PaymentMethod }
+type Payment = { Amount: decimal }
 
 // 請求ID
 type InvoiceId = InvoiceId of int
@@ -148,9 +148,9 @@ type CustomerInfo =
     { Name: string; BiilingAddress: string }
 
 // 請求額
-type BilledAmount =
-    { Amount: PaymentAmount
-      Currency: Currency }
+// type BilledAmount =
+//     { Amount: PaymentAmount
+//       Currency: Currency }
 
 // 請求項目リスト
 type InvoiceLine =
@@ -158,86 +158,82 @@ type InvoiceLine =
 
 // UnpaidInvoiceの定義は？
 // 未払いの請求書
-type UnpaidInvoice =
-    { Id: InvoiceId
-      CustomerInfo: CustomerInfo
-      AmouuntDue: BilledAmount
-      Lines: InvoiceLine list }
+type UnpaidInvoice = { Id: int; AmouuntDue: decimal }
 
 
 // PaidInvoiceの定義は
 // 支払い済みの請求書
 // 元の請求書と支払い情報を組み合わせたレコード
-type PaidInvoice =
-    { OriginalInvoice: UnpaidInvoice
-      Payment: Payment
-      PaidOnDate: System.DateTime
-      ConfirmationCode: string }
+// type PaidInvoice =
+//     { OriginalInvoice: UnpaidInvoice
+//       Payment: Payment
+//       PaidOnDate: System.DateTime
+//       ConfirmationCode: string }
 
 // 実行可能なアクションを文章化するために、代わりに関数を表す型を定義する
-type PayInvoice = UnpaidInvoice -> Payment -> PaidInvoice
+// type PayInvoice = UnpaidInvoice -> Payment -> PaidInvoice
 
 // A.通常の支払い処理
-let payInvoice (unpaid: UnpaidInvoice) (payment: Payment) : PaidInvoice =
-    { OriginalInvoice = unpaid
-      Payment = payment
-      PaidOnDate = System.DateTime.UtcNow
-      ConfirmationCode = "CONF-XYZ-123" }
+// let payInvoice (unpaid: UnpaidInvoice) (payment: Payment) : PaidInvoice =
+//     { OriginalInvoice = unpaid
+//       Payment = payment
+//       PaidOnDate = System.DateTime.UtcNow
+//       ConfirmationCode = "CONF-XYZ-123" }
 
 // B.ポイントを使って支払う、別の実装
-let payInvoiceWithPoints (unpaid: UnpaidInvoice) (payment: Payment) : PaidInvoice =
-    // ポイント利用のロジック
-    printfn " （ポイント利用のロジックが実行されました）"
+// let payInvoiceWithPoints (unpaid: UnpaidInvoice) (payment: Payment) : PaidInvoice =
+// ポイント利用のロジック
+// printfn " （ポイント利用のロジックが実行されました）"
 
-    { OriginalInvoice = unpaid
-      Payment = payment
-      PaidOnDate = System.DateTime.UtcNow
-      ConfirmationCode = "CONF-XYZ-456" }
+// { OriginalInvoice = unpaid
+//   Payment = payment
+//   PaidOnDate = System.DateTime.UtcNow
+//   ConfirmationCode = "CONF-XYZ-456" }
 
 // 「請求書を支払う能力」を受け取って、ログ出力などの共通処理を追加する関数
-let executePaymentProcess (paymentProcessor: PayInvoice) (invoice: UnpaidInvoice) (payment: Payment) =
-    printfn "--- 支払いプロセスを開始します ---"
-    let paidInvoice = paymentProcessor invoice payment
-    printfn "--- 支払いプロセスが完了しました ---"
-    paidInvoice
+// let executePaymentProcess (paymentProcessor: PayInvoice) (invoice: UnpaidInvoice) (payment: Payment) =
+//     printfn "--- 支払いプロセスを開始します ---"
+//     let paidInvoice = paymentProcessor invoice payment
+//     printfn "--- 支払いプロセスが完了しました ---"
+//     paidInvoice
 
 
-let sampleUnpaidInvoice =
-    { Id = InvoiceId 101
-      CustomerInfo =
-        { Name = "山田 太郎"
-          BiilingAddress = "東京都渋谷区..." }
-      AmouuntDue =
-        { Amount = PaymentAmount 1500.00m
-          Currency = USD }
-      Lines =
-        [ { Description = "商品A"
-            Amount = 1000.00m }
-          { Description = "商品B"
-            Amount = 500.00m } ] }
+// let sampleUnpaidInvoice =
+//     { Id = InvoiceId 101
+//       CustomerInfo =
+//         { Name = "山田 太郎"
+//           BiilingAddress = "東京都渋谷区..." }
+//       AmouuntDue =
+//         { Amount = PaymentAmount 1500.00m
+//           Currency = USD }
+//       Lines =
+//         [ { Description = "商品A"
+//             Amount = 1000.00m }
+//           { Description = "商品B"
+//             Amount = 500.00m } ] }
 
-// 2. サンプルの「支払い」データを作成する
-let samplePayment =
-    { Amount = PaymentAmount 1500.00m
-      Currency = USD
-      Method =
-        Card
-            { CardType = Visa
-              CardNumber = CardNumber "1234-5678-9012-3456" } }
+// // 2. サンプルの「支払い」データを作成する
+// let samplePayment =
+//     { Amount = PaymentAmount 1500.00m
+//       Currency = USD
+//       Method =
+//         Card
+//             { CardType = Visa
+//               CardNumber = CardNumber "1234-5678-9012-3456" } }
 
 
-// 1. 「通常の支払い能力」を渡してプロセスを実行
-printfn "¥n[実行例1: 通常の支払い]"
-let result1 = executePaymentProcess payInvoice sampleUnpaidInvoice samplePayment
-printfn "結果：%A" result1
+// // 1. 「通常の支払い能力」を渡してプロセスを実行
+// printfn "¥n[実行例1: 通常の支払い]"
+// let result1 = executePaymentProcess payInvoice sampleUnpaidInvoice samplePayment
+// printfn "結果：%A" result1
 
-// 2. 「ポイント利用の支払い能力」を渡してプロセスを実行
-printfn "¥n[実行例2: ポイントを使った支払い]"
+// // 2. 「ポイント利用の支払い能力」を渡してプロセスを実行
+// printfn "¥n[実行例2: ポイントを使った支払い]"
 
-let result2 =
-    executePaymentProcess payInvoiceWithPoints sampleUnpaidInvoice samplePayment
+// let result2 =
+//     executePaymentProcess payInvoiceWithPoints sampleUnpaidInvoice samplePayment
 
-printfn "結果：%A" result2
+// printfn "結果：%A" result2
 
 // ではポイントの前にクーポンを適用するかどうか？をどうやって定義するか
 // 支払い前に適用できるものが増えると、 その組み合わせのカ数だけアクションの定義が増えてしまう
@@ -277,6 +273,11 @@ type Discount =
     | PointsUesd of Points // 「ポイント利用」を定義
 // GifCartApplied of GitCard // 新しい割引方法もこのように追加できる
 
+type PaidInvoice =
+    { InvoiceId: int
+      AmountPaid: decimal
+      AppliedDiscounts: Discount list }
+
 // 「支払い前の請求書」という、進行中の状態を表す型を定義する
 // 割引の「原因と過程」を残すと何が嬉しいの？
 // ⇨その請求書がどういう過程でその金額になったかを記録するため
@@ -310,6 +311,66 @@ let applyPoints points (invoice: PrePaymentInvoice) =
         CurrentAmountDue = invoice.CurrentAmountDue - discountAmount }
 
 // TODO ステップ4：PayInvoiceの定義を更新するを書く
+// 「支払い能力」は、割引適用済みの請求書(PrePaymentInvoice)を受け取るように更新する
+type PayInvoice = PrePaymentInvoice -> Payment -> PaidInvoice
+
+// 支払い関数の「実装」
+let payInvoice (prePaymentInvoice: PrePaymentInvoice) (payment: Payment) : PaidInvoice =
+    // 本来はここで、prePaymentInvoice.CurrentAmountDue と Payment.Amount が
+    // 一致するかどうかを厳密に検証する
+    if prePaymentInvoice.CurrentAmountDue <> payment.Amount then
+        // エラー処理（この例では例外を投げる）
+        failwithf "支払額が一致しません。請求額: %M, 支払額; %M" prePaymentInvoice.CurrentAmountDue payment.Amount
+    else
+        { InvoiceId = prePaymentInvoice.OriginalInvoice.Id
+          AmountPaid = payment.Amount
+          AppliedDiscounts = prePaymentInvoice.AppliedDiscounts }
+
+// ここからが実行部分
+// 1.元となる「未払い請求書」を作成
+let unpaid = { Id = 101; AmouuntDue = 1500m }
+printfn "--- 処理開始 ---"
+printfn "元の請求額: %M¥n" unpaid.AmouuntDue
+
+// 2.支払い前の請求書（割引の買い物カゴ）を初期化
+let initialPrePayment =
+    { OriginalInvoice = unpaid
+      AppliedDiscounts = []
+      CurrentAmountDue = unpaid.AmouuntDue }
+
+// 3.クーポンを適用
+let coupon = { Code = "AUTUMN2025"; Amount = 100m }
+let afterCoupon = applyCoupon coupon initialPrePayment
+printfn "クーポンを適用後・・・現在の請求額: %M¥n" afterCoupon.CurrentAmountDue
+
+// 4.続いてポイントを適用
+let points = Points 200
+let afterPoints = applyPoints points afterCoupon
+printfn "ポイント適用後・・・現在の請求額: %M¥n" afterPoints.CurrentAmountDue
+
+// 5.最終的な請求額に合った「支払い」を作成
+let finalPayment = { Amount = 1200m }
+printfn "最終請求額 %M に対して、%Mを支払います・・・" finalPayment.Amount afterPoints.CurrentAmountDue
+
+// 6.payInvoice関数を呼び出して支払いを完了
+let paidInvoice = payInvoice afterPoints finalPayment
+printfn "¥n支払い成功！"
+
+// 7.最終的に作成された「支払いずみ請求書」の中身を表示
+printfn "--- 作成された支払い済み請求書 ---"
+printfn "%A" paidInvoice
+
+// 8.最終的な請求額に合った「失敗する金額の支払い」を作成
+let finalFailurePayment = { Amount = 1100m }
+printfn "最終請求額 %M に対して、%Mを支払います・・・" finalFailurePayment.Amount afterPoints.CurrentAmountDue
+
+// 9.payInvoice関数を呼び出して支払いを完了
+let paidFailureInvoice = payInvoice afterPoints finalFailurePayment
+printfn "¥n支払い失敗！"
+
+// 10.最終的に作成された「支払いずみ請求書」の中身を表示
+printfn "--- 作成された支払い済み請求書 ---"
+printfn "%A" paidFailureInvoice
 
 
 // 省略可能な値のモデリング
