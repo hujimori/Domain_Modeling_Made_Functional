@@ -215,3 +215,73 @@ let verifiedTestEmail = VerifiedEmailAddress testEmail
 resetPasswordWorkflow createPasswordResetEmail mockDispatchEmail verifiedTestEmail
 
 printfn "--- テスト終了 ---"
+
+// 顧客に連絡を取る方法が必要だというビジネスルールがあるとする。
+// 「顧客は、電子メールをまたは郵便のアドレスを持っている必要がある」というルールを定義する
+// ルールは以下の3つ
+// ・メールアドレスのみ
+// ・住所のみ
+// ・メールアドレスと住所の両方
+
+// メールアドレスのみ
+type EmailContactInfo = exn
+
+// 住所のみ
+type PostalContactInfo = exn
+
+// メールアドレスと住所の両方
+type BothContactInfo = {
+    Email: EmailContactInfo
+    Address: PostalContactInfo
+}
+
+// 連絡先情報を以下のルールに従って定義
+// 各ルールと定義が1対1になって分かりやすい
+// ルールは以下の3つ
+// ・メールアドレスのみ
+// ・住所のみ
+// ・メールアドレスと住所の両方
+type ContactInfo = 
+    | EmailOnly of EmailContactInfo
+    | AddressOnly of PostalContactInfo
+    | EmailAddress of BothContactInfo
+
+
+// 連絡先
+type Contact = {
+    Name: string
+    ContactInfo: ContactInfo
+}
+
+// 1つの集約内での整合性
+// 集約が整合性の境界として永続化の単位として働く
+// <注文>と言う集約を例に考えてみる
+
+// 注文の明細行を更新するワークフローの定義
+// 3つのパラメーターを渡す
+// トップレベルの注文
+// 変更したい注文明細行のID
+// 新しい価格
+let changeOrderLinePrice order orderLineId newPrice =
+    
+    // orderLineIdを使用してorder.OrderLinesからorderLineを検索
+    let orderLine= order.OrderLines |> findOrderLine orderLineId
+
+    // 新しい価格を持つ、新しいバージョンの注文明細行を作成
+    let newOrderLine = {orderLine with Price = newPrice}
+
+    // 古い明細行を新しい明細行で置き換えた、新しい明細行リストを作成
+    let newOrderLines = order.OrderLines |> replaceOrderLine orderLineId newOrderLine
+
+    // 新しい請求額の合計を作成
+    let newAmountToBill = newOrderLines |> List.sumBy (fun line -> line.Price)
+
+    // 新しい明細行リストを持つ、新しいバージョンの注文を作成
+    let newOrder = {
+        order with
+            OrderLines = newOrderLines
+            AmountToBill = newAmountToBill
+    }
+
+    newOrder
+    
