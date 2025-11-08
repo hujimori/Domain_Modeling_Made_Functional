@@ -52,18 +52,8 @@ let fiveMeters = 5.0<m>
 // 型で表現するとこうなる
 type KilogramQuantity = KilogramQuantity of decimal<kg>
 
-// 型システムによる普遍条件の矯正
-// 1つの注文には1つの明細行が必ず存在することを強制する
-type NonEmptyList<'a> = {
-    First: 'a
-    Rest: 'a list
-}
 
-type OrderLine = exn
 
-type Order = {
-    OrderLines: NonEmptyList<OrderLine>
-}
 
 // ビジネスルールを型システムで表現する
 // ある会社の顧客のメールアドレスを例に考える
@@ -257,11 +247,60 @@ type Contact = {
 // 集約が整合性の境界として永続化の単位として働く
 // <注文>と言う集約を例に考えてみる
 
+// 型システムによる普遍条件の矯正
+// 1つの注文には1つの明細行が必ず存在することを強制する
+type NonEmptyList<'a> = {
+    First: 'a // 必ずは1つ存在する、先頭の要素
+    Rest: 'a list // 0個以上の、残りの要素（これは標準の空リストでもOK）
+}
+
+// 注文明細行の定義
+type OrderLine = {
+    Id: string
+    ItemName: string
+    Price: decimal
+}
+type Order = {
+    // 注文には必ず一つの明細行が存在する
+    OrderLines: NonEmptyList<OrderLine>
+    AmountToBill: decimal
+}
+
+// NonEmptyListからIDでOrderLineを検索する
+let findOrderLine(idTosFind: string) (lines: NonEmptyList<OrderLine>) : OrderLine =
+    if lines.First.Id = idTosFind then
+        lines.First
+    else
+        // Q.これ何？
+        lines.Rest |> List.find(fun line -> line.Id = idTosFind)
+
+// NonEmptyList内の特定のOrderLineを置き換える
+let replaceOrderLine (idToReplace: string) (newLine: OrderLine) (lines: NonEmptyList<OrderLine>) : NonEmptyList<OrderLine> =
+
+    // 置き換えロジックを定義
+    let replace (line: OrderLine) = 
+        if line.Id = idToReplace then newLine else line
+
+    // FisrtとRestの両方にロジックを適用して、新しいNonEmptyListを返す
+    {
+        // Q.なぜ両方書き換える
+        First = replace lines.First
+        Rest = lines.Rest |> List.map replace
+    }
+
+// NonEpmtyListの合計を計算する
+let nonEpmtySumBy (projection: 'a -> decimal) (list: NonEmptyList<'a>) : decimal =
+    let firstSum = projection list.First
+    let restSum = list.Rest |> List.sumBy projection
+    
+    firstSum + restSum
+
 // 注文の明細行を更新するワークフローの定義
 // 3つのパラメーターを渡す
 // トップレベルの注文
 // 変更したい注文明細行のID
 // 新しい価格
+
 let changeOrderLinePrice order orderLineId newPrice =
     
     // orderLineIdを使用してorder.OrderLinesからorderLineを検索
@@ -274,7 +313,7 @@ let changeOrderLinePrice order orderLineId newPrice =
     let newOrderLines = order.OrderLines |> replaceOrderLine orderLineId newOrderLine
 
     // 新しい請求額の合計を作成
-    let newAmountToBill = newOrderLines |> List.sumBy (fun line -> line.Price)
+    let newAmountToBill = newOrderLines |> nonEpmtySumBy (fun line -> line.Price)
 
     // 新しい明細行リストを持つ、新しいバージョンの注文を作成
     let newOrder = {
@@ -285,3 +324,17 @@ let changeOrderLinePrice order orderLineId newPrice =
 
     newOrder
     
+// テスト用のデータを作成
+let line1 = {Id = "L1"; ItemName="りんご"; Price = 100m}
+let line2 = {Id = "L2"; ItemName="バナナ"; Price = 200m}
+let testLines = {First = line1; Rest=[line2]}
+let testOrder = {OrderLines = testLines; AmountToBill = 300m}
+
+printfn "--- 更新前 ---"
+printfn "%A" testOrder
+
+let changedOrder = changeOrderLinePrice testOrder "L1" 150m
+
+printfn "¥n--- 更新後 ---"
+printfn "%A" changedOrder
+
