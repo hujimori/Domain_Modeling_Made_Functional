@@ -127,6 +127,7 @@ type ShoppingCart =
     | PaidCart of PaidCartData // 支払い済みのカート
 
 // 商品を追加するコマンドハンドラーを定義
+// これは状態遷移関数
 let addItem cart item = 
     match cart with
     | EmptyCart ->
@@ -141,6 +142,7 @@ let addItem cart item =
 
 // 商品を削除するコマンドハンドラーを定義
 // ロバストにやるなら無視はしないで適切なエラーを返すべき
+// 状態遷移関数
 let deleteItem cart itemToDelete = 
     match cart with
     | EmptyCart ->
@@ -158,3 +160,120 @@ let deleteItem cart itemToDelete =
     | PaidCart _ ->
         // 無視
         cart
+
+// 支払い済みの状態にするための状態遷移関数
+let makePayment cart payment =
+    match cart with
+    | EmptyCart ->
+        // 無視
+        cart
+    | ActiveCart {UnpaidItems=existingItems} ->
+        // 指定された支払いで、新しい支払い済みのカートを作成
+        PaidCart {PaidItems = existingItems; Payment=payment}
+    | PaidCart _ ->
+        cart
+
+// 型を使ったワークフローの各ステップのモデリング
+// 検証のステップ
+// 製品コードの存在チェック
+type ProductCode = ProductCode of string
+type checkProductCodeExists = ProductCode -> bool
+
+// 検証済みのアドレス
+type CheckedAddress = CheckedAddress of UnvalidatedAddress
+// 住所の検証エラー
+type AddressValidationError = AddressValidationError of string
+// 注文の検証ステップ
+type CheckAddressExists = UnvalidatedAddress -> Result<CheckedAddress, AddressValidationError>
+
+// 注文の検証ステップ
+type ValidationError = ValidationError of string
+type ValidateOrder =
+    checkProductCodeExists // 依存関係
+        -> CheckAddressExists // 依存関係
+        -> UnvalidatedOrder // 入力
+        -> Result<ValidatedOrder, ValidationError>
+
+// 価格設定のステップ
+// 製品価格の取得
+type Price = Price of int
+type GetProductPrice =
+    ProductCode -> Price
+type PriceOrder =
+    GetProductPrice // 依存関係
+        -> ValidatedOrder // 入力
+        -> PricedOrder // 出力
+
+// 注文確認ステップ
+type HtmlString = HtmlString of string
+type EmailAddress = EmailAddress of string
+// 注文確認
+type OrderAcknowledgement = {
+    EmailAddress : EmailAddress
+    Letter : HtmlString
+}
+// 注文書の作成
+type CreateOrderAcknowdgementLetter = PricedOrder -> HtmlString
+type OrderAcknowledgementSent = {
+    OrderId: int
+    EmailAddress: EmailAddress
+}
+// 注文書の送信
+// これは副作用のある関数
+// 送信したイベント
+type SendResult = Sent | NotSent
+type SendOrderAcknowledgement = OrderAcknowledgement -> SendResult
+
+
+type AckknowledgeOrder =
+    CreateOrderAcknowdgementLetter // 依存関係
+        -> SendOrderAcknowledgement // 依存関係
+        -> PricedOrder // 入力
+        -> OrderAcknowledgementSent // 出力
+
+// 返すイベント
+// 注文が確定したイベント
+type OrderPlaced = PricedOrder
+// 請求可能な注文が確定したイベント
+type BillableOrderPlaced = {
+    OrderId: string
+    BillingAddress: Address
+    AmountToBill: int
+}
+
+type PlaceOrderResult = {
+    OrderPlaced: OrderPlaced
+    BillableOrderPlaed: BillableOrderPlaced
+    OrderAcknowledgementSent: OrderAcknowledgementSent option
+}
+
+// 注文確定イベント
+type PlaceOrderEvent =
+    | OrderPlaced of OrderPlaced
+    | BillableOrderPlaced of BillableOrderPlaced
+    | AckknowledgeSent of OrderAcknowledgementSent
+
+type CreateEvents = PricedOrder -> PlaceOrderEvent list
+
+
+
+printfn "--- カートにアイテムを追加します ---"
+let item1 = {Id="id1";ItemName="シャツ";Price=8000}
+let item2 = {Id="id2";ItemName="ズボン";Price=8000}
+let cart1 = addItem EmptyCart item1
+printfn "カート1の中身は¥n"
+printfn "%A¥n" cart1
+
+let cart2 = addItem cart1 item2
+
+printfn "¥nカート2の中身は¥n"
+printfn "¥n%A¥n" cart2
+
+printfn "アイテム2を削除"
+let deleteItemCart1 = deleteItem cart2 item2
+printfn "¥n%A¥n" deleteItemCart1
+
+printfn "アイテム1を削除"
+
+let deleteItemCart2 = deleteItem deleteItemCart1 item1
+printfn "¥n%A¥n" deleteItemCart2
